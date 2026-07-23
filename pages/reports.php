@@ -1,0 +1,12 @@
+<?php
+require_once __DIR__ . '/../includes/functions.php';
+require_login();
+$pageTitle='Reports';
+$from=$_GET['from']??date('Y-m-01');$to=$_GET['to']??date('Y-m-d');
+$sql='SELECT pr.*, vi.full_name, vi.phone, ve.plate_number, ve.vehicle_type, ps.slot_code FROM parking_records pr JOIN visitors vi ON vi.id=pr.visitor_id JOIN vehicles ve ON ve.id=pr.vehicle_id JOIN parking_slots ps ON ps.id=pr.slot_id WHERE DATE(pr.check_in) BETWEEN ? AND ? ORDER BY pr.check_in DESC';
+$stmt=db()->prepare($sql);$stmt->execute([$from,$to]);$records=$stmt->fetchAll();
+$total=array_sum(array_map(fn($r)=>(float)$r['fee'],$records));
+require __DIR__ . '/../includes/header.php';
+?>
+<div class="print-brand"><h1><?= APP_NAME ?></h1><p><?= APP_TAGLINE ?></p></div><div class="card p-4"><div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-3"><div><h1 class="h3">Parking Reports</h1><p class="text-muted mb-0">Filter, export, and print parking activity.</p></div><div class="no-print mt-3 mt-md-0"><button class="btn btn-outline-secondary" data-print><i class="fa-solid fa-print me-1"></i> Print</button> <a class="btn btn-success" href="<?= BASE_URL ?>/exports/export_csv.php?from=<?= e($from) ?>&to=<?= e($to) ?>"><i class="fa-solid fa-file-csv me-1"></i> CSV</a></div></div><form class="row g-3 no-print mb-3"><div class="col-md-5"><label class="form-label">From</label><input class="form-control" type="date" name="from" value="<?= e($from) ?>"></div><div class="col-md-5"><label class="form-label">To</label><input class="form-control" type="date" name="to" value="<?= e($to) ?>"></div><div class="col-md-2 d-flex align-items-end"><button class="btn btn-primary w-100">Filter</button></div></form><div class="alert alert-info">Total revenue for selected range: <strong>$<?= number_format($total,2) ?></strong></div><div class="table-responsive"><table class="table table-bordered"><thead><tr><th>Visitor</th><th>Phone</th><th>Plate</th><th>Type</th><th>Slot</th><th>Check-in</th><th>Check-out</th><th>Status</th><th>Fee</th></tr></thead><tbody><?php foreach($records as $r): ?><tr><td><?= e($r['full_name']) ?></td><td><?= e($r['phone']) ?></td><td><?= e($r['plate_number']) ?></td><td><?= e($r['vehicle_type']) ?></td><td><?= e($r['slot_code']) ?></td><td><?= e($r['check_in']) ?></td><td><?= e($r['check_out']??'') ?></td><td><?= e($r['status']) ?></td><td>$<?= number_format((float)$r['fee'],2) ?></td></tr><?php endforeach; ?></tbody></table></div></div>
+<?php require __DIR__ . '/../includes/footer.php'; ?>
